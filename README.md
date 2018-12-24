@@ -1,4 +1,4 @@
-# servify
+# servicearea
 run the following commands
 npm install express
 npm install express
@@ -13,3 +13,9 @@ The user can view the co-ordinates of any polygon drawn on the map,by clicking o
 
 On the second page the user can click anywhere on the map.If the lat and longitude is within any area a blue triangle will appear with
 an info window,showing the co-ordinates and the name of the service area.If it doesnt match a red circle is shown.
+
+
+API created
+saveServiceArea: To get save the created service area
+getServiceAreas : To get all the service areas
+checkServiceArea : To check whether a location falls in the bounding box or not. (checked from backend as well as from localstorage)
