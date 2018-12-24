@@ -1,7 +1,7 @@
 # servicearea
 run the following commands
 npm install express
-npm install express
+npm install mongoose
 npm install body-parser
 
 
