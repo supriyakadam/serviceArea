@@ -7,33 +7,43 @@ app
       $stateProvider
         .state('home', {
           url: '/',
-          templateUrl: '../index.html',
+          reload: true,
+          templateUrl: '../map.html',
           controller: 'MapCtrl'
         })
         .state('checkServiceAreas', {
           url: '/checkServiceAreas',
+          reload: true,
           templateUrl: '../checkServiceAreas.html',
           controller: 'checkServiceAreasCtrl'
         })
 
-      $urlRouterProvider.otherwise('home');
+      $urlRouterProvider.otherwise('/');
     }
   ]);
 var url = "http://localhost:3000";
-app.controller('MapCtrl', function ($scope, $http, $localStorage) {
+(function () {
+  var googleMapOptions = function () {
+    return {
+      zoom: 10,
+      center: new google.maps.LatLng(19.0760, 72.8777),
+      mapTypeId: google.maps.MapTypeId.ROADMAP,
+      disableDefaultUI: true,
+      zoomControl: true
+    }
+  };
+  app.service('googleMapOptionsService', googleMapOptions);
+}());
+app.controller('MapCtrl', function ($scope, $http, $localStorage, googleMapOptionsService) {
   var drawingManager;
   var selectedShape;
   var infoWindow = {};
-  var map = {};
   var newShape = {};
   $scope.form = {};
+  var map = {};
   $scope.allServiceAreas = [];
-  $scope.coordinates = [];
   var currentPolygon = [];
   $scope.$storage = $localStorage;
-  // if ($localStorage.project === undefined) {
-  //   $localStorage.project = [];
-  // }
   if ($localStorage.polyBounds === undefined) {
     $localStorage.polyBounds = [];
   }
@@ -69,11 +79,8 @@ app.controller('MapCtrl', function ($scope, $http, $localStorage) {
 
   function setSelection(shape) {
     //clearSelection();
-    console.log(shape);
-    if (shape.editable) {
-      selectedShape = shape;
-      selectedShape.setEditable(true);
-    }
+    selectedShape = shape;
+    selectedShape.setEditable(true);
   }
 
   function deleteSelectedShape() {
@@ -82,7 +89,6 @@ app.controller('MapCtrl', function ($scope, $http, $localStorage) {
       drawingManager.setOptions({
         drawingControl: true
       });
-
     }
   }
   $scope.clearData = function () {
@@ -102,31 +108,34 @@ app.controller('MapCtrl', function ($scope, $http, $localStorage) {
         drawingControl: true
       });
       $scope.coordinates = [];
-      if (response && !response.err) {
-        // $scope.$storage.project.push(response.data);
-        var newCoordinates = response.data.loc.coordinates[0];
-        var polyBoundsArr = newCoordinates.map((n, i) => {
-          return {
-            lat: n[1],
-            lng: n[0]
+      if (response.err) {
+        currentPolygon.setMap(null);
+        alert(response.err.errmsg);
+      } else {
+        if (response.data) {
+          var newCoordinates = response.data.loc.coordinates[0];
+          var polyBoundsArr = newCoordinates.map((n, i) => {
+            return {
+              lat: n[1],
+              lng: n[0]
+            }
+          });
+          $scope.$storage.polyBounds.push({
+            name: response.data.name,
+            coordinates: polyBoundsArr
+          });
+          var options = {
+            strokeColor: '#FF0000',
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: '#FF0000',
+            fillOpacity: 0.35,
+            editable: false,
+            content: response.data.name
           }
-        });
-        $scope.$storage.polyBounds.push({
-          name: response.data.name,
-          coordinates: polyBoundsArr
-        });
-        console.log("-----------------", $scope.$storage.polyBounds)
-        var options = {
-          strokeColor: '#FF0000',
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          fillColor: '#FF0000',
-          fillOpacity: 0.35,
-          editable: false,
-          content: response.data.name
+          currentPolygon.setOptions(options);
+          currentPolygon.addListener('click', showInfo);
         }
-        currentPolygon.setOptions(options);
-        currentPolygon.addListener('click', showInfo);
       }
     });
   }
@@ -160,7 +169,6 @@ app.controller('MapCtrl', function ($scope, $http, $localStorage) {
         editable: false,
         content: data[i].name
       });
-      //console.log("name",data[i]);
       polygon.setMap(map);
       polygon.addListener('click', showInfo);
     }
@@ -170,13 +178,9 @@ app.controller('MapCtrl', function ($scope, $http, $localStorage) {
   }
 
   function initialize() {
-    map = new google.maps.Map(document.getElementById('map'), {
-      zoom: 10,
-      center: new google.maps.LatLng(19.0760, 72.8777),
-      mapTypeId: google.maps.MapTypeId.ROADMAP,
-      disableDefaultUI: true,
-      zoomControl: true
-    });
+
+    $scope.coordinates = [];
+    map = new google.maps.Map(document.getElementById('map'), googleMapOptionsService);
     infoWindow = new google.maps.InfoWindow;
     var polyOptions = {
       strokeWeight: 0,
@@ -246,16 +250,11 @@ app.controller('MapCtrl', function ($scope, $http, $localStorage) {
     $scope.displayAllServiceAreas()
   }
   initialize();
+
 });
-app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage) {
+app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage, googleMapOptionsService) {
   function initMap() {
-    var map = new google.maps.Map(document.getElementById('map'), {
-      zoom: 10,
-      center: new google.maps.LatLng(19.0760, 72.8777),
-      mapTypeId: google.maps.MapTypeId.ROADMAP,
-      disableDefaultUI: true,
-      zoomControl: true
-    });
+    var map = new google.maps.Map(document.getElementById('map1'), googleMapOptionsService);
     var infoWindow = new google.maps.InfoWindow;
 
     function showInfo(event, data) {
@@ -276,7 +275,7 @@ app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage) 
     google.maps.event.addListener(map, 'click', function (e) {
       infoWindow.close(map);
       var containsLatLong = null;
-      //uncomment from line 281-320 to check service area from backend
+      //uncomment from line 279-318 to check service area from backend
       // $http.post(url + '/serviceArea/checkServiceArea', {
       //   clickedArea: [e.latLng.lng(), e.latLng.lat()]
       // }).success(function (response) {
@@ -296,7 +295,7 @@ app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage) 
       //       containsLatLong ?
       //       "m 0 -1 l 1 2 -2 0 z" :
       //       google.maps.SymbolPath.CIRCLE;
-            
+
       //     var resultColor =
       //       containsLatLong ?
       //       'blue' :
@@ -318,7 +317,7 @@ app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage) 
       //     }
       // })
 
-      //uncomment from line 323-354 to check service area from localstorage
+      //uncomment from line 321-349 to check service area from localstorage
       var totalRecords = $localStorage.polyBounds;
       containsLatLong = totalRecords.find((n) => {
         var polyGon = new google.maps.Polygon({

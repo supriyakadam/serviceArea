@@ -1,0 +1,23 @@
+<div class="container">
+    <h1>Create Service Areas</h1>
+    <button style="float: left;" class="btn btn-primary" ui-sref="checkServiceAreas">Go Check
+        Service Areas</button>
+    <div>
+        <!-- <button type="button" class="btn btn-danger fas fa-sync-alt" style="margin-left: 1em; float: right;"></button> -->
+        <button type="button" class="btn btn-danger" style="float: right;" ng-click="clearData()" id="delete-button">Delete
+            Selected Shape</button>
+    </div>
+
+    <div ng-show="coordinates.length>0" style="padding-top: 5em;">
+        <form name="services" class="form-horizontal">
+            <label ng-if="coordinates.length>0" class="col-xs-2 control-label">Name</label>
+            <div ng-if="coordinates.length>0" class="col-md-6 col-xs-10">
+                <input ng-model="form.serviceName" class="form-control" required />
+            </div>
+            <button type="button" class="btn btn-success" style="padding-right: 1em; margin-right: 17em;" ng-if="coordinates.length>0"
+                ng-disabled="services.$invalid" ng-click="saveServiceArea(form)">Add
+                Service Area</button>
+        </form>
+    </div>
+    <div id="map" style="margin-top: 5em;"></div>
+</div>
