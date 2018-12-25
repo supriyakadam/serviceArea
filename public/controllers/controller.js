@@ -7,13 +7,11 @@ app
       $stateProvider
         .state('home', {
           url: '/',
-          reload: true,
           templateUrl: '../map.html',
           controller: 'MapCtrl'
         })
         .state('checkServiceAreas', {
           url: '/checkServiceAreas',
-          reload: true,
           templateUrl: '../checkServiceAreas.html',
           controller: 'checkServiceAreasCtrl'
         })
@@ -22,26 +20,63 @@ app
     }
   ]);
 var url = "http://localhost:3000";
+
 (function () {
   var googleMapOptions = function () {
-    return {
+    return new google.maps.Map(document.getElementById('map'), {
       zoom: 10,
       center: new google.maps.LatLng(19.0760, 72.8777),
       mapTypeId: google.maps.MapTypeId.ROADMAP,
       disableDefaultUI: true,
       zoomControl: true
-    }
+    })
   };
-  app.service('googleMapOptionsService', googleMapOptions);
+  app.service('mapPageService', googleMapOptions);
 }());
-app.controller('MapCtrl', function ($scope, $http, $localStorage, googleMapOptionsService) {
+
+(function () {
+  var googleMapOptions = function () {
+    return new google.maps.Map(document.getElementById('map1'), {
+      zoom: 10,
+      center: new google.maps.LatLng(19.0760, 72.8777),
+      mapTypeId: google.maps.MapTypeId.ROADMAP,
+      disableDefaultUI: true,
+      zoomControl: true
+    })
+  };
+  app.service('checkServiceAreaPageService', googleMapOptions);
+}());
+
+(function () {
+  var drawingOptions = function () {
+    var polyOptions = {
+      strokeWeight: 0,
+      fillOpacity: 0.45,
+      editable: true
+    };
+    var drawingManager = new google.maps.drawing.DrawingManager({
+      drawingMode: google.maps.drawing.OverlayType.POLYGON,
+      drawingControlOptions: {
+        drawingModes: [
+          google.maps.drawing.OverlayType.POLYGON
+        ]
+      },
+      polylineOptions: {
+        editable: true
+      },
+      polygonOptions: polyOptions
+    });
+    return drawingManager;
+  };
+  app.service('drawingOptionsService', drawingOptions);
+}());
+app.controller('MapCtrl', function ($scope, $http, $localStorage, mapPageService, drawingOptionsService, $rootScope) {
   var drawingManager;
   var selectedShape;
   var infoWindow = {};
   var newShape = {};
   $scope.form = {};
   var map = {};
-  $scope.allServiceAreas = [];
   var currentPolygon = [];
   $scope.$storage = $localStorage;
   if ($localStorage.polyBounds === undefined) {
@@ -175,31 +210,20 @@ app.controller('MapCtrl', function ($scope, $http, $localStorage, googleMapOptio
     drawingManager.setOptions({
       drawingControl: true
     });
+    //$scope.$apply();
   }
+  $rootScope.showMapPage = true;
+  $rootScope.showServiceAreaPage = false;
 
   function initialize() {
-
     $scope.coordinates = [];
-    map = new google.maps.Map(document.getElementById('map'), googleMapOptionsService);
+    map = mapPageService;
     infoWindow = new google.maps.InfoWindow;
-    var polyOptions = {
-      strokeWeight: 0,
-      fillOpacity: 0.45,
-      editable: true
-    };
-    drawingManager = new google.maps.drawing.DrawingManager({
-      drawingMode: google.maps.drawing.OverlayType.POLYGON,
-      drawingControlOptions: {
-        drawingModes: [
-          google.maps.drawing.OverlayType.POLYGON
-        ]
-      },
-      polylineOptions: {
-        editable: true
-      },
-      polygonOptions: polyOptions,
-      map: map
-    });
+    drawingManager = drawingOptionsService;
+    drawingManager.setOptions({
+      map: mapPageService
+    })
+
     google.maps.event.addListener(drawingManager, 'overlaycomplete', function (e) {
       // Switch back to non-drawing mode after drawing a shape.
       drawingManager.setDrawingMode(null);
@@ -252,9 +276,12 @@ app.controller('MapCtrl', function ($scope, $http, $localStorage, googleMapOptio
   initialize();
 
 });
-app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage, googleMapOptionsService) {
+app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage, $rootScope, checkServiceAreaPageService) {
+  $rootScope.showMapPage = false;
+  $rootScope.showServiceAreaPage = true;
+  var map1 = {};
   function initMap() {
-    var map = new google.maps.Map(document.getElementById('map1'), googleMapOptionsService);
+    map1 = checkServiceAreaPageService;
     var infoWindow = new google.maps.InfoWindow;
 
     function showInfo(event, data) {
@@ -270,10 +297,10 @@ app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage, 
       // Replace the info window's content and position.
       infoWindow.setContent(contentString);
       infoWindow.setPosition(event.latLng);
-      infoWindow.open(map);
+      infoWindow.open(map1);
     }
-    google.maps.event.addListener(map, 'click', function (e) {
-      infoWindow.close(map);
+    google.maps.event.addListener(map1, 'click', function (e) {
+      infoWindow.close(map1);
       var containsLatLong = null;
       //uncomment from line 279-318 to check service area from backend
       // $http.post(url + '/serviceArea/checkServiceArea', {
@@ -337,7 +364,7 @@ app.controller('checkServiceAreasCtrl', function ($scope, $http, $localStorage, 
         'red';
       new google.maps.Marker({
         position: e.latLng,
-        map: map,
+        map: map1,
         icon: {
           path: resultPath,
           fillColor: resultColor,
